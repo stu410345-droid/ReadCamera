@@ -17,6 +17,7 @@
     .top-bar {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 15px;
       background-color: #ffffff;
       padding: 12px 20px;
@@ -24,15 +25,25 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       flex-wrap: wrap;
     }
-    .top-bar h1 { margin: 0; font-size: 1.25rem; }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #333;
+    }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .btn {
       padding: 6px 12px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: #fff;
       background-color: #0d6efd;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      white-space: nowrap;
     }
     .btn-secondary { background-color: #198754; }
     .btn-info { background-color: #0dcaf0; color: #000; }
@@ -42,11 +53,12 @@
       background-color: #ffffff;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      min-height: 250px;
     }
     #reader {
       width: 100%;
-      max-width: 500px;
-      margin: 20px auto;
+      max-width: 450px;
+      margin: 15px auto;
     }
     #status {
       font-weight: bold;
@@ -57,15 +69,17 @@
 </head>
 <body>
 
+  <!-- 頂部橫幅區塊 -->
   <div class="top-bar">
     <h1>XXX學校 QRcode簽到點名系統</h1>
-    <div>
-      <button class="btn" onclick="showSection('sendMail')">發出點名信</button>
+    <div class="button-group">
+      <button class="btn" onclick="showSection('發出點名信')">發出點名信</button>
       <button class="btn btn-secondary" onclick="startScanner()">學生簽到 (開鏡頭)</button>
-      <button class="btn btn-info" onclick="showSection('query')">查詢出缺席</button>
+      <button class="btn btn-info" onclick="showSection('查詢出缺席')">查詢出缺席</button>
     </div>
   </div>
 
+  <!-- 主要內容顯示區 -->
   <div class="content-area" id="mainContent">
     <h3>學生簽到區</h3>
     <div id="reader"></div>
@@ -73,27 +87,40 @@
   </div>
 
   <script>
-    // ⚠️ 請將引號內的網址替換為您的 Google Apps Script Web App 部署網址 ⚠️
+    // ⚠️️ 請填入您的 Google Apps Script Web App 部署網址 ⚠️
     const GAS_WEB_APP_URL = "https://script.google.com/a/macros/kssh.khc.edu.tw/s/AKfycbxoarp_kI4R4aEIBPxKHbJninUhQr5L5_QSftPW4Imz7gAGTcazfJJb-R7Dl9xfREcjsw/exec"; 
     let html5QrcodeScanner;
 
+    // 開啟鏡頭掃描
     function startScanner() {
-      document.getElementById('status').innerText = "開啟攝影機中，請允許相機存取權限...";
-      
-      if (!html5QrcodeScanner) {
-        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      const contentDiv = document.getElementById('mainContent');
+      contentDiv.innerHTML = `
+        <h3>學生簽到 (鏡頭掃描)</h3>
+        <div id="status">開啟攝影機中，請允許相機權限...</div>
+        <div id="reader"></div>
+      `;
+
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
       }
-      
+
+      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
       html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
+    // 掃描成功後發送至 Google 試算表
+    function onScanSuccess(decodedText) {
       document.getElementById('status').innerText = `掃描成功！內容：${decodedText}，正在傳送至試算表...`;
       
-      // 停止掃描
-      html5QrcodeScanner.clear();
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear();
+      }
 
-      // 發送資料給 Google Apps Script 寫入試算表
+      if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+        document.getElementById('status').innerText = `⚠️ 請先在 index.html 設定 GAS_WEB_APP_URL 網址！`;
+        return;
+      }
+
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -104,12 +131,12 @@
         document.getElementById('status').innerText = `✅ 簽到成功！內容：${decodedText}`;
       })
       .catch(error => {
-        document.getElementById('status').innerText = `❌ 簽到傳送失敗：${error}`;
+        document.getElementById('status').innerText = `❌ 傳送失敗：${error}`;
       });
     }
 
     function onScanFailure(error) {
-      // 掃描過程中持續搜尋
+      // 掃描搜尋中
     }
 
     function showSection(name) {
