@@ -14,12 +14,9 @@
       padding: 15px;
       background-color: #f8f9fa;
     }
-
-    /* 頂部橫幅：包含系統標題、使用者資訊、按鈕組 */
     .top-bar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 15px;
       background-color: #ffffff;
       padding: 12px 20px;
@@ -27,168 +24,92 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       flex-wrap: wrap;
     }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      flex-wrap: wrap;
-    }
-
-    .top-bar h1 {
-      margin: 0;
-      font-size: 1.2rem;
-      color: #333;
-    }
-
-    /* 使用者資訊區塊 */
-    .user-badge {
-      background-color: #e9ecef;
-      padding: 4px 10px;
-      border-radius: 15px;
-      font-size: 0.88rem;
-      color: #495057;
-      display: none; /* 驗證成功後顯示 */
-    }
-
-    .button-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
+    .top-bar h1 { margin: 0; font-size: 1.25rem; }
     .btn {
       padding: 6px 12px;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       color: #fff;
       background-color: #0d6efd;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      white-space: nowrap;
     }
     .btn-secondary { background-color: #198754; }
     .btn-info { background-color: #0dcaf0; color: #000; }
-
     .content-area {
       margin-top: 20px;
       padding: 20px;
       background-color: #ffffff;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      min-height: 250px;
     }
-
     #reader {
       width: 100%;
-      max-width: 450px;
-      margin: 15px auto;
+      max-width: 500px;
+      margin: 20px auto;
     }
-
-    .alert-danger {
-      color: #842029;
-      background-color: #f8d7da;
-      border: 1px solid #f5c2c7;
-      padding: 15px;
-      border-radius: 5px;
+    #status {
+      font-weight: bold;
+      color: #0d6efd;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 頂部橫幅區塊 -->
   <div class="top-bar">
-    <div class="header-left">
-      <h1>XXX學校 QRcode簽到點名系統</h1>
-      <div id="userInfo" class="user-badge">驗證中...</div>
-    </div>
-    <div class="button-group" id="mainButtons" style="display: none;">
+    <h1>XXX學校 QRcode簽到點名系統</h1>
+    <div>
       <button class="btn" onclick="showSection('sendMail')">發出點名信</button>
-      <button class="btn btn-secondary" onclick="startScanner()">學生簽到</button>
+      <button class="btn btn-secondary" onclick="startScanner()">學生簽到 (開鏡頭)</button>
       <button class="btn btn-info" onclick="showSection('query')">查詢出缺席</button>
     </div>
   </div>
 
-  <!-- 主要內容顯示區 -->
   <div class="content-area" id="mainContent">
-    <p>正在驗證權限，請稍候...</p>
+    <h3>學生簽到區</h3>
+    <div id="reader"></div>
+    <div id="status">準備中，請點擊「學生簽到」開啟相機...</div>
   </div>
 
   <script>
+    // ⚠️ 請將引號內的網址替換為您的 Google Apps Script Web App 部署網址 ⚠️
+    const GAS_WEB_APP_URL = "https://script.google.com/a/macros/kssh.khc.edu.tw/s/AKfycbxoarp_kI4R4aEIBPxKHbJninUhQr5L5_QSftPW4Imz7gAGTcazfJJb-R7Dl9xfREcjsw/exec"; 
     let html5QrcodeScanner;
 
-    // 頁面載入時進行 Google 帳號身分比對
-    window.onload = function() {
-      google.script.run
-        .withSuccessHandler(onPermissionCheck)
-        .withFailureHandler(onCheckFailed)
-        .getUserPermission();
-    };
-
-    function onPermissionCheck(res) {
-      const userInfoDiv = document.getElementById('userInfo');
-      const buttonsDiv = document.getElementById('mainButtons');
-      const contentDiv = document.getElementById('mainContent');
-
-      if (res.hasAccess) {
-        // 顯示使用者名稱與職稱
-        userInfoDiv.innerText = `👤 ${res.name} ${res.title}`;
-        userInfoDiv.style.display = 'inline-block';
-        buttonsDiv.style.display = 'flex';
-        
-        contentDiv.innerHTML = `<h3>歡迎使用系統，${res.name} ${res.title}！</h3><p>請點選上方按鈕選擇您要執行的功能。</p>`;
-      } else {
-        userInfoDiv.style.display = 'none';
-        buttonsDiv.style.display = 'none';
-        contentDiv.innerHTML = `<div class="alert-danger">
-          <h3>⚠️ 存取權限受限</h3>
-          <p>${res.message}</p>
-        </div>`;
-      }
-    }
-
-    function onCheckFailed(error) {
-      document.getElementById('mainContent').innerHTML = `<div class="alert-danger">
-        <h3>⚠️ 系統系統驗證發生錯誤</h3>
-        <p>${error.message}</p>
-      </div>`;
-    }
-
-    // 開啟鏡頭掃描
     function startScanner() {
-      const contentDiv = document.getElementById('mainContent');
-      contentDiv.innerHTML = `
-        <h3>學生簽到 (鏡頭掃描)</h3>
-        <div id="status" style="color:#0d6efd; font-weight:bold;">開啟攝影機中，請允許權限...</div>
-        <div id="reader"></div>
-      `;
-
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
+      document.getElementById('status').innerText = "開啟攝影機中，請允許相機存取權限...";
+      
+      if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
       }
-
-      html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      
       html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
 
-    // 掃描成功後寫入試算表
-    function onScanSuccess(decodedText) {
-      document.getElementById('status').innerText = `掃描成功！內容：${decodedText}，正在寫入試算表...`;
+    function onScanSuccess(decodedText, decodedResult) {
+      document.getElementById('status').innerText = `掃描成功！內容：${decodedText}，正在傳送至試算表...`;
+      
+      // 停止掃描
       html5QrcodeScanner.clear();
 
-      google.script.run
-        .withSuccessHandler(function(res) {
-          if(res.success) {
-            document.getElementById('status').innerText = `✅ 簽到成功！內容：${decodedText}`;
-          } else {
-            document.getElementById('status').innerText = `❌ 寫入失敗：${res.message}`;
-          }
-        })
-        .recordCheckIn(decodedText);
+      // 發送資料給 Google Apps Script 寫入試算表
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrData: decodedText })
+      })
+      .then(() => {
+        document.getElementById('status').innerText = `✅ 簽到成功！內容：${decodedText}`;
+      })
+      .catch(error => {
+        document.getElementById('status').innerText = `❌ 簽到傳送失敗：${error}`;
+      });
     }
 
     function onScanFailure(error) {
-      // 搜尋中
+      // 掃描過程中持續搜尋
     }
 
     function showSection(name) {
