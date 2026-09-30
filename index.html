@@ -4,7 +4,7 @@
   <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XXX學校跑班課 QRcode簽到點名系統</title>
+  <title>XXX學校 QRcode簽到點名系統</title>
   <!-- 引入 QR Code 掃描套件 -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
@@ -58,7 +58,7 @@
 <body>
 
   <div class="top-bar">
-    <h1>XXX學校跑班課 QRcode簽到點名系統</h1>
+    <h1>XXX學校 QRcode簽到點名系統</h1>
     <div>
       <button class="btn" onclick="showSection('sendMail')">發出點名信</button>
       <button class="btn btn-secondary" onclick="startScanner()">學生簽到 (開鏡頭)</button>
@@ -109,7 +109,7 @@
     }
 
     function onScanFailure(error) {
-      // 掃描過程中的持續搜尋狀態，可不處理
+      // 掃描過程中持續搜尋
     }
 
     function showSection(name) {
