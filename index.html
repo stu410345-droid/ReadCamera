@@ -5,6 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>XXX學校跑班課 QRcode簽到點名系統</title>
+  <!-- 引入 QR Code 掃描套件 -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
       font-family: Arial, "Microsoft JhengHei", sans-serif;
@@ -12,109 +14,108 @@
       padding: 15px;
       background-color: #f8f9fa;
     }
-
-    /* 頂部列：標題與按鈕橫向排成一列 */
     .top-bar {
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       gap: 15px;
       background-color: #ffffff;
       padding: 12px 20px;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      flex-wrap: wrap; /* 避免在小螢幕上擠壓變形 */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
     }
-
-    .top-bar h1 {
-      margin: 0;
-      font-size: 1.25rem;
-      color: #333333;
-      white-space: nowrap;
-    }
-
-    .button-group {
-      display: flex;
-      gap: 10px;
-    }
-
-    /* 按鈕大小依據字體大小彈性調整 (padding & inline-block) */
+    .top-bar h1 { margin: 0; font-size: 1.25rem; }
     .btn {
-      display: inline-block;
       padding: 6px 12px;
       font-size: 0.95rem;
-      font-weight: 500;
-      color: #ffffff;
+      color: #fff;
       background-color: #0d6efd;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      transition: background-color 0.2s ease;
-      white-space: nowrap;
     }
-
-    .btn:hover {
-      background-color: #0b5ed7;
-    }
-
-    .btn-secondary {
-      background-color: #198754;
-    }
-    .btn-secondary:hover {
-      background-color: #157347;
-    }
-
-    .btn-info {
-      background-color: #0dcaf0;
-      color: #000;
-    }
-    .btn-info:hover {
-      background-color: #31d2f2;
-    }
-
-    /* 主要內容顯示區 */
+    .btn-secondary { background-color: #198754; }
+    .btn-info { background-color: #0dcaf0; color: #000; }
     .content-area {
       margin-top: 20px;
       padding: 20px;
       background-color: #ffffff;
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-      min-height: 300px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    #status {
+      font-weight: bold;
+      color: #0d6efd;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 頂部列 -->
   <div class="top-bar">
     <h1>XXX學校跑班課 QRcode簽到點名系統</h1>
-    <div class="button-group">
+    <div>
       <button class="btn" onclick="showSection('sendMail')">發出點名信</button>
-      <button class="btn btn-secondary" onclick="showSection('checkIn')">學生簽到</button>
+      <button class="btn btn-secondary" onclick="startScanner()">學生簽到 (開鏡頭)</button>
       <button class="btn btn-info" onclick="showSection('query')">查詢出缺席</button>
     </div>
   </div>
 
-  <!-- 功能內容切換區域 -->
   <div class="content-area" id="mainContent">
-    <h3>歡迎使用簽到系統</h3>
-    <p>請點擊上方按鈕選擇所需執行的功能。</p>
+    <h3>學生簽到區</h3>
+    <div id="reader"></div>
+    <div id="status">準備中，請點擊「學生簽到」開啟相機...</div>
   </div>
 
   <script>
-    // 切換功能區域的邏輯
-    function showSection(sectionName) {
-      const content = document.getElementById('mainContent');
+    // 請將此處替換為您發布的 GAS 網頁應用程式 URL
+    const GAS_WEB_APP_URL = "YOUR_GAS_WEB_APP_URL_HERE"; 
+    let html5QrcodeScanner;
+
+    function startScanner() {
+      document.getElementById('status').innerText = "開啟攝影機中，請允許相機存取權限...";
       
-      if (sectionName === 'sendMail') {
-        content.innerHTML = '<h3>功能一：發出點名信</h3><p>此處將載入學生名單並自動寄送包含 QRcode 的點名信。</p>';
-      } else if (sectionName === 'checkIn') {
-        content.innerHTML = '<h3>功能二：學生簽到</h3><p>此處將開啟相機鏡頭以掃描學生的 QRcode 進行簽到。</p>';
-      } else if (sectionName === 'query') {
-        content.innerHTML = '<h3>功能三：查詢出缺席</h3><p>此處將顯示學生即時簽到記錄與出缺席統計。</p>';
+      if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
       }
+      
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      document.getElementById('status').innerText = `掃描成功！資料：${decodedText}，正在傳送至試算表...`;
+      
+      // 停止掃描
+      html5QrcodeScanner.clear();
+
+      // 發送資料給 Google Apps Script
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrData: decodedText })
+      })
+      .then(() => {
+        document.getElementById('status').innerText = `✅ 簽到成功！內容：${decodedText}`;
+      })
+      .catch(error => {
+        document.getElementById('status').innerText = `❌ 簽到失敗：${error}`;
+      });
+    }
+
+    function onScanFailure(error) {
+      // 掃描過程中的持續搜尋狀態，可不處理
+    }
+
+    function showSection(name) {
+      if (html5QrcodeScanner) html5QrcodeScanner.clear();
+      document.getElementById('mainContent').innerHTML = `<h3>${name}</h3><p>此功能開發中...</p>`;
     }
   </script>
-
 </body>
 </html>
