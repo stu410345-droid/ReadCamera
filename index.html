@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>XXX學校 QRcode簽到點名系統</title>
+  <!-- 引入 QR Code 掃描套件 -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
@@ -24,8 +25,16 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       flex-wrap: wrap;
     }
-    .top-bar h1 { margin: 0; font-size: 1.25rem; color: #333; }
-    .button-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      color: #333;
+    }
+    .button-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .btn {
       padding: 6px 12px;
       font-size: 0.9rem;
@@ -46,12 +55,22 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
       min-height: 250px;
     }
-    #reader { width: 100%; max-width: 450px; margin: 15px auto; }
-    #status { font-weight: bold; color: #0d6efd; margin-top: 10px; }
+    #reader {
+      width: 100%;
+      max-width: 450px;
+      margin: 15px auto;
+    }
+    #status {
+      font-weight: bold;
+      color: #0d6efd;
+      margin-top: 10px;
+      font-size: 1.05rem;
+    }
   </style>
 </head>
 <body>
 
+  <!-- 頂部橫幅區塊 -->
   <div class="top-bar">
     <h1>XXX學校 QRcode簽到點名系統</h1>
     <div class="button-group">
@@ -61,40 +80,53 @@
     </div>
   </div>
 
+  <!-- 主要內容顯示區 -->
   <div class="content-area" id="mainContent">
     <h3>學生簽到區</h3>
     <div id="reader"></div>
-    <div id="status">準備中，請點擊「學生簽到」開啟相機...</div>
+    <div id="status">準備就緒！請點擊「學生簽到 (開鏡頭)」開始進行點名。</div>
   </div>
 
   <script>
-    // 請替換為您發布的 GAS Web App URL
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec"; 
+    // ⚠️ 請填入您發布的 Google Apps Script Web App 部署網址 ⚠️
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxoarp_kI4R4aEIBPxKHbJninUhQr5L5_QSftPW4Imz7gAGTcazfJJb-R7Dl9xfREcjsw/exec"; 
+    
     let html5QrcodeScanner;
 
+    // 開啟鏡頭掃描
     function startScanner() {
       const contentDiv = document.getElementById('mainContent');
       contentDiv.innerHTML = `
         <h3>學生簽到 (鏡頭掃描)</h3>
-        <div id="status">開啟攝影機中，請允許相機權限...</div>
+        <div id="status">📷 開啟攝影機中，請允許相機存取權限...</div>
         <div id="reader"></div>
       `;
 
       if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
+        try { html5QrcodeScanner.clear(); } catch(e){}
       }
 
       html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
       html5QrcodeScanner.render(onScanSuccess, onScanFailure);
     }
 
+    // 掃描成功處理邏輯
     function onScanSuccess(decodedText) {
-      document.getElementById('status').innerText = `掃描成功！內容：${decodedText}，正在傳送至試算表...`;
+      const statusDiv = document.getElementById('status');
+      statusDiv.style.color = "#0d6efd";
+      statusDiv.innerText = `⏳ 掃描成功！內容：${decodedText}，正在發送至試算表...`;
       
       if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear();
+        try { html5QrcodeScanner.clear(); } catch(e){}
       }
 
+      if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        statusDiv.style.color = "#dc3545";
+        statusDiv.innerText = `⚠️ 請先在 index.html 中設定有效的 GAS_WEB_APP_URL！`;
+        return;
+      }
+
+      // 發送資料至 Apps Script
       const formData = new URLSearchParams();
       formData.append('qrData', decodedText);
 
@@ -105,19 +137,23 @@
         body: formData.toString()
       })
       .then(() => {
-        document.getElementById('status').innerText = `✅ 簽到成功！內容：${decodedText}`;
+        statusDiv.style.color = "#198754";
+        statusDiv.innerText = `✅ 簽到寫入成功！內容：${decodedText}`;
       })
       .catch(error => {
-        document.getElementById('status').innerText = `❌ 傳送失敗：${error}`;
+        statusDiv.style.color = "#dc3545";
+        statusDiv.innerText = `❌ 傳送失敗：${error}`;
       });
     }
 
     function onScanFailure(error) {
-      // 掃描尋找中
+      // 持續搜尋 QR Code 中
     }
 
     function showSection(name) {
-      if (html5QrcodeScanner) html5QrcodeScanner.clear();
+      if (html5QrcodeScanner) {
+        try { html5QrcodeScanner.clear(); } catch(e){}
+      }
       document.getElementById('mainContent').innerHTML = `<h3>${name}</h3><p>此功能開發中...</p>`;
     }
   </script>
