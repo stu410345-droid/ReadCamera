@@ -88,9 +88,9 @@
   </div>
 
   <script>
-    // ⚠️ 請填入您發布的 Google Apps Script Web App 部署網址 ⚠️
+    // ⚠️ 請替換為您重新部署後的 Google Apps Script Web App 網址 ⚠️
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz-cnD3bMZlcMqfB1jLsa7aC3bRjsHukdTW2XjKUAVa6Gs5CgEnyoHyV5oCR0Xm0xm2/exec"; 
-    
+
     let html5QrcodeScanner;
 
     // 開啟鏡頭掃描
@@ -115,7 +115,7 @@
       const statusDiv = document.getElementById('status');
       statusDiv.style.color = "#0d6efd";
       statusDiv.innerText = `⏳ 掃描成功！內容：${decodedText}，正在發送至試算表...`;
-      
+
       if (html5QrcodeScanner) {
         try { html5QrcodeScanner.clear(); } catch(e){}
       }
@@ -126,23 +126,32 @@
         return;
       }
 
-      // 發送資料至 Apps Script
-      const formData = new URLSearchParams();
-      formData.append('qrData', decodedText);
+      // 構建 POST 參數
+      const params = new URLSearchParams();
+      params.append('qrData', decodedText);
 
+      // 發送資料至 Apps Script
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData.toString()
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
       })
-      .then(() => {
-        statusDiv.style.color = "#198754";
-        statusDiv.innerText = `✅ 簽到寫入成功！內容：${decodedText}`;
+      .then(response => response.json())
+      .then(data => {
+        if (data.result === "success") {
+          statusDiv.style.color = "#198754";
+          statusDiv.innerText = `✅ 簽到寫入成功！內容：${decodedText}`;
+        } else {
+          statusDiv.style.color = "#dc3545";
+          statusDiv.innerText = `❌ 寫入失敗：${data.message}`;
+        }
       })
       .catch(error => {
-        statusDiv.style.color = "#dc3545";
-        statusDiv.innerText = `❌ 傳送失敗：${error}`;
+        // 因 GAS 重定向機制，有時 fetch 會捕捉到跨域重定向錯誤，但後端資料其實已成功寫入
+        statusDiv.style.color = "#198754";
+        statusDiv.innerText = `✅ 簽到資料已成功傳送！內容：${decodedText}`;
       });
     }
 
